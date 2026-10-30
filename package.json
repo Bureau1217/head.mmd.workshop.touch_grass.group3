@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:phone": "nuxi dev --public --https --https.cert .certs/dev-cert.pem --https.key .certs/dev-key.pem",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -15,6 +16,9 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "sass": "^1.106.1"
+    "@webgpu/types": "^0.1.74",
+    "sass": "^1.106.1",
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.14"
   }
 }

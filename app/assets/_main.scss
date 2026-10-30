@@ -1,6 +1,8 @@
-@use "a-params";
-@use "b-font-loader";
-@use "c-grid";
+// Global styles, loaded once from nuxt.config.ts.
+// The a- / b- / c- prefixes only keep the files listed in load order.
+@use "a-params"; // CSS variables: colors, fonts, spacing, z-index
+@use "b-font-loader"; // @font-face rules for the fonts in public/fonts/
+@use "c-grid"; // 12-column grid helpers (from the project template, not used by the game yet)
 
 *,
 *::before,
@@ -8,7 +10,31 @@
   box-sizing: border-box;
 }
 
+// The game is a fixed full-screen app: no scrolling, no text selection, no browser gestures
+html,
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  background: var(--app-color-background);
+  color: var(--app-color-text);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+// No text selection anywhere, except in text fields and the elements around them. iPhones block
+// moving the cursor in a field (tap-and-drag, or holding the spacebar on the keyboard) when any
+// element around it has selection turned off, even if the field turns it back on.
+:where(body *:not(input, textarea):not(:has(input, textarea))) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  font-family: var(--app-font-sans);
+}
+
+// Components set their own display; `hidden` must still win
+[hidden] {
+  display: none !important;
 }

@@ -1,3 +1,5 @@
+// 12-column flex grid from the project template. Not used by the game yet.
+// Usage: <div class="app-container"><div class="app-container__coll-6-12">half width</div></div>
 .app-container {
   display: flex;
   flex-wrap: wrap;
@@ -46,7 +48,7 @@
   padding-right: calc(var(--app-gutter) / 2);
 }
 
-.app-no-first-and-list-child-margin {
+.app-no-first-and-last-child-margin {
   & > *:first-child {
     margin-top: 0;
   }

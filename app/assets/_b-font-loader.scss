@@ -25,3 +25,28 @@
        url('/fonts/GeistMono/variable/GeistMono-Italic[wght].ttf') format('truetype');
   font-style: italic;
 }
+
+@font-face {
+  font-family: 'DM Serif Display';
+  src: url('/fonts/DMSerifDisplay/DMSerifDisplay-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Serif Display';
+  src: url('/fonts/DMSerifDisplay/DMSerifDisplay-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Shantell Sans';
+  src: url('/fonts/ShantellSans/ShantellSans-variable.ttf') format('truetype-variations'),
+       url('/fonts/ShantellSans/ShantellSans-variable.ttf') format('truetype');
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}

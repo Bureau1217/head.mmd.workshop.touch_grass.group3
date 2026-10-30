@@ -1,10 +1,47 @@
+// Design values shared by all components, as CSS custom properties (usable in any component's styles).
+// Colors that are also needed in TypeScript are copied in app/utils/touch-grass.ts (NIGHT_RGB, …).
 :root {
   --app-gutter: 1rem;
   --app-gutter-half: calc(var(--app-gutter) / 2);
+  // Distance from the screen edges, kept clear of the notch / home bar
+  --app-gutter-safe: max(16px, env(safe-area-inset-left));
+  --app-edge-top: max(16px, env(safe-area-inset-top));
+  --app-edge-right: max(16px, env(safe-area-inset-right));
+  --app-edge-left: max(16px, env(safe-area-inset-left));
 
+  // From the project template, not used by the game yet
   --app-color-primary: #FF00A6;
   --app-color-secondary: #FF8100;
   --app-color-tertiary: #9673F0;
   --app-color-quaternary: #26FF00;
   --app-color-white: #FFFFFF;
+
+  // Touch Grass game
+  --app-color-night: #131313; // NIGHT_RGB
+  --app-color-paper: #FFFFFF; // DAY_RGB
+  --app-color-ink: #000000;
+  --app-color-cream: #F3F0E8;
+  --app-color-mist: #BDBDBD;
+  --app-color-marker: #D9D9D9;
+  --app-color-carrot: #FFA600; // not used yet (the stroke files carry their own colors)
+  --app-color-leaf: #179C00; // "step done" flash, wind safe zone
+  --app-color-radish: #DA0000; // not used yet
+  --app-color-water: #0818FF; // water step: bar, and the sky spots (WATER_RGB)
+
+  // Page background. AppTouchGrass updates it from night to white as the sun comes up.
+  --app-color-background: var(--app-color-night);
+  --app-color-text: var(--app-color-mist);
+
+  --app-font-sans: 'Geist', system-ui, sans-serif;
+  --app-font-mono: 'Geist Mono', ui-monospace, monospace;
+  --app-font-serif: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  --app-font-hand: 'Shantell Sans', 'Comic Sans MS', system-ui, sans-serif;
+
+  // Captcha grid lines (AppCaptchaGrid). Translucent mist, so it stays faint on night, white and blue.
+  --app-color-grid: rgb(189 189 189 / 0.35);
+  --app-grid-line: 1px;
+
+  // Stacking order of the layers that must stay on top
+  --app-z-flash: 10;
+  --app-z-debug: 20;
 }
