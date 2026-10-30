@@ -56,9 +56,9 @@ const NIGHTFALL_DELAY = 0.8 // from the end of the wind step to the start of the
 const NIGHTFALL_SECONDS = 3.5 // the blend from white to night (like the sun step's fill time)
 
 // Wind. Distances are in screen widths, so it plays the same on any screen.
-const WIND_HOLD_SECONDS = 10 // held steady in the safe zone during gusts to finish the step
+const WIND_HOLD_SECONDS = 6 // held steady in the safe zone during gusts to finish the step
 const FIRST_GUST_DELAY = 1.2
-const GUST_PAUSE: [number, number] = [1, 2.2] // random pause between gusts
+const GUST_PAUSE: [number, number] = [0.8, 1.6] // random pause between gusts
 const GUST_DURATION: [number, number] = [2, 3.4]
 const GUST_STRENGTH: [number, number] = [0.75, 1.2]
 const GUST_FORCE = 0.9 // how hard a gust pushes the plant
