@@ -38,6 +38,7 @@ interface Letter {
 }
 
 const ITALIC_CHANCE = 0.45
+const HINT = 'type here' // faded text in the empty answer box
 // id of the SVG warp filter below; unique per instance, as there are two on the page
 const FILTER_ID = `app-typed-captcha-warp-${useId()}`
 
@@ -48,6 +49,11 @@ const noise = useTemplateRef<SVGFETurbulenceElement>('noise')
 const form = useTemplateRef<HTMLFormElement>('form')
 const input = useTemplateRef<HTMLInputElement>('input')
 const answer = ref('')
+// With the phone keyboard open, the screen shrinks to the part above it, so the words stay in view
+const viewport = useVisualViewport()
+const fitStyle = computed(() => viewport.height.value === null
+  ? undefined
+  : { top: `${viewport.top.value}px`, bottom: 'auto', height: `${viewport.height.value}px` })
 const solved = ref(false) // the right answer was typed
 const wrong = ref(false) // plays the shake animation
 let rafId = 0
@@ -198,7 +204,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-typed-captcha" :hidden="!visible">
+  <div
+    class="app-typed-captcha"
+    :class="{ 'app-typed-captcha--keyboard': viewport.keyboardOpen.value }"
+    :style="fitStyle"
+    :hidden="!visible"
+  >
     <h1 class="app-typed-captcha__captcha" :aria-label="title" :style="{ filter: `url(#${FILTER_ID})` }">
       <template v-if="words.length">
         <span
@@ -250,22 +261,29 @@ onBeforeUnmount(() => {
         <path class="app-typed-captcha__sketch-line" d="M18 9 C70 3 150 8 238 4 C253 8 258 23 256 37 C255 54 249 64 230 64 C160 68 92 63 22 66 C7 62 3 49 5 34 C6 21 5 13 26 8" />
         <path class="app-typed-captcha__sketch-line app-typed-captcha__sketch-line--thin" d="M30 13 C95 9 172 12 243 12 C251 17 252 30 251 41 C249 54 241 59 222 59 C152 62 84 58 17 60 C11 54 10 43 11 31 C12 21 15 17 40 14" />
       </svg>
-      <input
-        ref="input"
-        v-model="answer"
-        class="app-typed-captcha__input"
-        type="text"
-        inputmode="text"
-        autocomplete="off"
-        autocapitalize="none"
-        autocorrect="off"
-        spellcheck="false"
-        enterkeyhint="send"
-        aria-label="Type the words above"
-        :disabled="solved"
-        @click.once="emit('firstTap')"
-        @input="followCaret"
-      >
+      <span class="app-typed-captcha__field">
+        <input
+          ref="input"
+          v-model="answer"
+          class="app-typed-captcha__input"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="send"
+          aria-label="Type the words above"
+          :disabled="solved"
+          @click.once="emit('firstTap')"
+          @input="followCaret"
+        >
+        <!-- Shows the box takes typing: a blinking cursor (until the real one appears on focus) and a hint -->
+        <span v-if="!answer" class="app-typed-captcha__hint" aria-hidden="true">
+          <span class="app-typed-captcha__caret" />
+          {{ HINT }}
+        </span>
+      </span>
       <button
         v-if="withSubmit"
         type="submit"
@@ -288,6 +306,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: flex-end;
   padding: 16px var(--app-gutter-safe) max(48px, calc(env(safe-area-inset-bottom) + 32px));
+  container-type: size; // lets the title size itself to the height left
+
+  // Keyboard open: the box sits just above it
+  &.app-typed-captcha--keyboard {
+    padding-bottom: 16px;
+  }
 }
 
 // CAPTCHA title: heavy serif, letters crowding into each other on a wavy line
@@ -296,7 +320,7 @@ onBeforeUnmount(() => {
   max-width: 100%;
   font-family: var(--app-font-serif);
   font-weight: 400;
-  font-size: clamp(48px, 15vw, 116px);
+  font-size: clamp(32px, min(15vw, 12cqh), 116px); // shrinks when the keyboard leaves little height
   line-height: 0.95;
   text-align: center;
   color: var(--app-color-cream);
@@ -378,10 +402,52 @@ onBeforeUnmount(() => {
   }
 }
 
-.app-typed-captcha__input {
+// Holds the field and the hint laid over it
+.app-typed-captcha__field {
   position: relative;
   display: block;
   width: min(72vw, 340px);
+
+  .app-typed-captcha__answer--with-submit & {
+    width: min(58vw, 290px);
+  }
+}
+
+// Empty-box hint: blinking cursor + faded text, where the typed text will start
+.app-typed-captcha__hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: max(16px, 1.25rem); // same size as the field
+  color: var(--app-color-ink-faded);
+  white-space: nowrap;
+  pointer-events: none; // taps go through to the field
+}
+
+.app-typed-captcha__caret {
+  flex: none;
+  width: 2px;
+  height: 1.1em;
+  border-radius: 1px;
+  background: var(--app-color-ink);
+  animation: app-typed-captcha-blink 1s steps(1) infinite;
+
+  // Once focused, the browser shows its own cursor here
+  .app-typed-captcha__answer:focus-within & {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+.app-typed-captcha__input {
+  position: relative;
+  display: block;
+  width: 100%;
   margin: 0;
   padding: 0;
   border: 0;
@@ -444,6 +510,12 @@ onBeforeUnmount(() => {
   &:disabled {
     opacity: 0.6;
     cursor: default;
+  }
+}
+
+@keyframes app-typed-captcha-blink {
+  50% {
+    opacity: 0;
   }
 }
 
