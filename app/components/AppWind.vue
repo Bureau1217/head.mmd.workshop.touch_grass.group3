@@ -11,7 +11,7 @@ const props = defineProps<{
   gust: GustRequest | null
 }>()
 
-const WIND_SRC = '/images/wind.svg'
+const WIND_SRC = publicUrl('images/wind.svg')
 const WIND_WIDTH = 703 // wind.svg's own size
 const WIND_HEIGHT = 459
 const WIND_FALLBACK_WIDTH: [number, number] = [0.36, 220] // share of screen width, max px. Same as the CSS below.

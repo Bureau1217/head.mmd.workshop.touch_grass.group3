@@ -29,11 +29,12 @@ interface Stroke {
   window: number // share of paintProgress it takes to draw fully
 }
 
-const VEGGIE_URL = '/images/veggie.svg'
+const VEGGIE_URL = publicUrl('images/veggie.svg')
 const VEGGIE_WIDTH = 1420.49 // veggie.svg's viewBox size; everything else is placed in these coordinates
 const VEGGIE_HEIGHT = 1075.33
 const VIEW_BOX = `0 0 ${VEGGIE_WIDTH} ${VEGGIE_HEIGHT}`
-const strokeUrl = (id: string): string => `/images/strokes/stroke-${id}.svg`
+const STROKES_DIR = publicUrl('images/strokes/')
+const strokeUrl = (id: string): string => `${STROKES_DIR}stroke-${id}.svg`
 
 // Figma color strokes mapped into veggie.svg coordinates: [x, y, width, height].
 // Measured from the "2" frame, where the Figma image is veggie.svg at 1:1, offset by (851, 55).
