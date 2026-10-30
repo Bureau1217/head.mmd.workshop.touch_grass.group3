@@ -11,6 +11,23 @@ Disguised as a CAPTCHA, it takes the player through three steps to grow a drawin
 
 Without a camera, hold a finger on the screen (or Space on a computer) instead of light or blue. Arrow keys (or holding a finger left/right of center) stand in for turning.
 
+## Documentation
+
+### Gameplay
+
+A full playthrough on an iPhone, recorded from the live site on GitHub Pages (58 s). Click the picture to watch it.
+
+<a href="public/Documentation/gameplay.mp4"><img src="public/Documentation/gameplay-poster.jpg" alt="Screen recording: the vegetable drawing in color on white, during the game" width="260"></a>
+
+### Exhibition setup
+
+The installation: a screen with the QR code that opens the game, a 3D printer for the harvested tomato, real and printed vegetables on artificial grass, and a sign asking visitors to use mobile data, because the school Wi-Fi (eduroam) blocks the scan.
+
+<p>
+  <img src="public/Documentation/photo-6084.jpg" alt="Exhibition table: 3D printer, screen with a QR code in a red tomato shape, vegetables on artificial grass" width="400">
+  <img src="public/Documentation/photo-6085.jpg" alt="The same table from a slightly different angle" width="400">
+</p>
+
 ## Running it
 
 ```bash
