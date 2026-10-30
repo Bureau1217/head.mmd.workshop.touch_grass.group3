@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "nuxt": "^4.6.3",
+    "three": "^0.187.0",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@types/three": "^0.186.0",
     "@webgpu/types": "^0.1.74",
     "sass": "^1.106.1",
     "typescript": "^6.0.3",

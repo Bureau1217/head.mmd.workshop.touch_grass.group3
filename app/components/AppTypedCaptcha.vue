@@ -1,8 +1,7 @@
 <script setup lang="ts">
 // Typing CAPTCHA: a warped title (after Tom Rogers' CAPTCHA typeface) and a hand-drawn answer box.
-// Typing the words and pressing → (or Enter) emits `solved`. Used twice, both with the → button:
-//   start  that tap lets the browser ask for camera and motion
-//   final  that tap lets the browser start the harvest download
+// Typing the words and pressing → (or Enter) emits `solved`. Used as the start screen, with the
+// → button: that tap lets the browser ask for camera and motion.
 // Without `withSubmit` it would solve as soon as the text matches.
 
 const props = withDefaults(defineProps<{
@@ -174,7 +173,7 @@ function followCaret(): void {
 watch([answer, () => props.ready], () => {
   if (!props.withSubmit) check()
 })
-// Fresh each time it shows (the closing CAPTCHA comes back every round): empty field, new letters
+// Fresh each time it shows (it comes back after every harvest): empty field, new letters
 watch(() => props.visible, async (visible) => {
   if (visible) {
     answer.value = ''

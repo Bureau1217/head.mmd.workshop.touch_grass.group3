@@ -6,10 +6,10 @@ Disguised as a CAPTCHA, it takes the player through three steps to grow a drawin
 1. **Intro**: type the warped words to prove you're "a good working human", then press →.
 2. **Sun**: shine a light (phone torch, lamp, the sun) at the camera. The sky turns from night to white and the drawing colors itself in.
 3. **Water**: show the camera something blue until the grid is fully blue. Then the plant grows in bouncy steps, and the blue drains back to white.
-4. **Wind**: gusts push the plant sideways. Tilt the phone to keep it in the green zone of the bar.
-5. **Final**: type "i'll continue to be a hard working human" and press →. The screen blends from white back to night first, like the sun step in reverse. Sending downloads the finished drawing as an SVG ("the harvest") straight from that tap, so it works in every browser, then the game starts over at the sun step.
+4. **Wind**: gusts keep blowing the crops off the screen, somewhere around you (a new gust 9 seconds after they land). Turn around with the phone to find them (the bar at the bottom is a compass: the marker shows where they are), then keep them in the middle of the screen for 3 seconds.
+5. **Final**: the screen blends from white back to night (the sun step in reverse), then a 3D tomato appears that turns as you tilt the phone. **harvest** downloads the model (`.stl`) straight from that tap, so it works in every browser, then the game fades back to the start CAPTCHA.
 
-Without a camera, hold a finger on the screen (or Space on a computer) instead of light or blue. Arrow keys stand in for tilting.
+Without a camera, hold a finger on the screen (or Space on a computer) instead of light or blue. Arrow keys (or holding a finger left/right of center) stand in for turning.
 
 ## Running it
 
@@ -32,7 +32,7 @@ Add these to the URL:
 
 | Parameter | What it does |
 |---|---|
-| `?phase=water` / `wind` / `final` | Start at a later step (`final` tests the harvest download) |
+| `?phase=water` / `wind` / `final` | Start at a later step (`final` shows the tomato and tests the harvest download) |
 | `?debug` | Shows what the camera measures, plus sliders for the sun step. Press **N** to finish the current step |
 
 The `?debug` sliders are saved on the device. **copy** gives code to paste into `app/app.config.ts`, and **reset** goes back to that file's values.
@@ -44,8 +44,9 @@ app/
   app.vue                    mounts AppTouchGrass
   app.config.ts              sun step speed and light sensitivity (tunable)
   components/
-    AppTouchGrass.vue        the game: steps, frame loop, physics, harvest
-    AppTypedCaptcha.vue      typing CAPTCHA: start screen and closing screen
+    AppTouchGrass.vue        the game: steps, frame loop, physics
+    AppTypedCaptcha.vue      typing CAPTCHA: start screen
+    AppTomato.vue            closing screen: 3D tomato and the harvest button
     AppSky.vue               WebGPU noise sky (sun and water steps)
     AppPlant.vue             the vegetable drawing and its color strokes
     AppWind.vue              wind gust animations
@@ -56,10 +57,11 @@ app/
     AppDebugMeter.vue        ?debug panel
   composables/
     useCamera.ts             camera → light and blue readings (how light is detected is explained at the top)
-    useMotion.ts             gyroscope, touch and keyboard input
-    useHarvest.ts            prepares and downloads the SVG
+    useMotion.ts             gyroscope heading, touch and keyboard input
   lib/
     sky.ts                   noise reveal shader for the skies
+    tomato.ts                three.js scene for the tomato; prepares the model download
+    tomato-calyx.ts          stem, leaves and skin colors added to the STL tomato
     shader-fill.ts           minimal runner for Figma shaders
     custom-effects/          the fractal noise shader, copied unchanged from Figma
   utils/                     shared helpers and constants (auto-imported by Nuxt)
@@ -67,6 +69,7 @@ app/
   assets/                    global styles: CSS variables, fonts, grid
 public/
   images/                    veggie.svg, stroke files, wind.svg, reference material
+  Model/tomat_2.stl          the 3D tomato (STL: shape only; colors, stem and leaves are added in app/lib/)
   fonts/
 ```
 

@@ -17,7 +17,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  // The drawing is built; the parent keeps it to save as the harvest file
+  // The drawing is built
   ready: [drawing: SVGSVGElement]
   error: [error: unknown]
 }>()

@@ -1,21 +1,21 @@
 <script setup lang="ts">
 /* Touch Grass: the whole game. Mounted once from app.vue.
  *
- * Flow: intro (type the CAPTCHA) → sun → water → wind → done → final (type the closing CAPTCHA) → sun again.
+ * Flow: intro (type the CAPTCHA) → sun → water → wind → done → final (3D tomato, "harvest") → intro again.
  *   sun    Shine a light at the camera. The sky goes from night to white, then the drawing colors in.
  *   water  Show the camera something blue until the grid is fully blue. Then the plant grows in
  *          bouncy steps while it stays blue, and the blue drains back to white.
- *   wind   Gusts push the plant sideways; tilt the phone to keep it in the green zone of the bar.
- *   final  A closing CAPTCHA to type, with a → button. Sending it downloads the finished drawing
- *          as an SVG ("the harvest"). Browsers only allow a download straight after a tap or Enter,
- *          so this works everywhere, iPhones included.
+ *   wind   Gusts keep blowing the crops off the screen, somewhere around the player. Turn (the
+ *          whole phone, in the room) to find them, then hold them in view for a few seconds.
+ *   final  A 3D tomato that turns as the phone tilts. The "harvest" button downloads the model
+ *          (.glb), then the screen fades and the game goes back to the start CAPTCHA.
  *
  * How it runs: one requestAnimationFrame loop (frame()) calls the update function of the current
  * step with the time since the last frame (dt, in seconds). The update functions change plain
  * variables and a few refs; the child components only display those refs.
  *
  * Testing helpers (add to the URL):
- *   ?phase=water|wind|final start at a later step (final: to test the harvest download)
+ *   ?phase=water|wind|final start at a later step (final: the tomato and the harvest download)
  *   ?debug                  shows the camera readout and sun sliders; press N to finish the current step
  * Without a camera, hold a finger on the screen (or Space on a computer) instead of light/blue.
  */
@@ -28,7 +28,6 @@ import type { GustRequest, LightbarVariant, Phase, SkyStatus } from '~/types/tou
 // Steps that ?phase= can jump to, in order
 const PHASE_ORDER: Phase[] = ['sun', 'water', 'wind', 'done', 'final']
 const INTRO_TITLE = 'i am a good working human'
-const FINAL_TITLE = 'i\'ll continue to be a hard working human'
 const MAX_FRAME_SECONDS = 0.05 // cap on one frame's time step, so a stutter doesn't make things jump
 
 // Sun
@@ -51,20 +50,35 @@ const SIZE_DAMPING = 2.8 // how quickly the wobble dies down
 const GROW_KICK = 1.1 // extra speed given to the size at each growth step (higher = stronger pulse)…
 const GROW_KICK_LAST = 1.7 // …and at the last one, for a bigger finish
 
-// Final: after the wind, the sun sky plays backwards (white to night, cell by cell), then the closing CAPTCHA
+// Final: after the wind, the sun sky plays backwards (white to night, cell by cell), then the tomato
 const NIGHTFALL_DELAY = 0.8 // from the end of the wind step to the start of the blend
 const NIGHTFALL_SECONDS = 3.5 // the blend from white to night (like the sun step's fill time)
+// The tomato turns with the phone, relative to how it was held when the tomato appeared
+const TOMATO_TILT_GAIN = 2 // degrees the tomato turns per degree the phone tilts
+const TOMATO_TURN_SPEED_DEG = 120 // without a gyroscope: degrees per second at full arrow key / touch
+const TOMATO_SMOOTHING = 0.12 // seconds; smooths small hand shakes
+const HARVEST_TO_INTRO_SECONDS = 1 // after "harvest": the tomato fades, then the start CAPTCHA shows
 
-// Wind. Distances are in screen widths, so it plays the same on any screen.
-const WIND_HOLD_SECONDS = 6 // held steady in the safe zone during gusts to finish the step
-const FIRST_GUST_DELAY = 1.2
-const GUST_PAUSE: [number, number] = [0.8, 1.6] // random pause between gusts
-const GUST_DURATION: [number, number] = [2, 3.4]
-const GUST_STRENGTH: [number, number] = [0.75, 1.2]
-const GUST_FORCE = 0.9 // how hard a gust pushes the plant
-const TILT_FORCE = 1.3 // how hard tilting the phone pushes it back
-const WIND_DRAG = 1.8 // slows the plant down, so it doesn't slide forever
-const EDGE_BOUNCE = 0.3 // share of its speed the plant keeps when it hits a screen edge
+// Wind. Directions are degrees around the player; the screen shows VIEW_ANGLE_DEG of them.
+const FIRST_GUST_DELAY = 1.2 // from the start of the step to the first gust
+// Gusts keep coming: this long after the crops land, the next gust blows them away again.
+// Leaves time to turn (a few seconds) and then hold them for WIND_HOLD_SECONDS.
+const GUST_EVERY_SECONDS = 9
+const GUST_DURATION = 2.8 // the wind symbols crossing the screen
+const BLOW_SECONDS = 2.4 // the crops flying off
+const BLOW_ANGLE: [number, number] = [120, 180] // how far round the crops land, to the left or right (random)
+const BLOW_LIFT = 0.3 // how high the crops arc up mid-flight, as a share of the screen height
+const BLOW_SPIN_TURNS = 1 // full turns the crops tumble while flying
+const BLOW_SHRINK = 0.35 // how much smaller they get mid-flight, as if carried off into the distance
+const WIND_HOLD_SECONDS = 3 // the crops held in view (within WIND_FOUND_ANGLE_DEG) to finish the step
+const WIND_LOSE_SECONDS = 1.5 // out of view, the hold drains back to empty in this time
+const TURN_SPEED_DEG = 90 // without a gyroscope: degrees per second at full arrow key / touch
+// Once landed, the crops keep wandering a little, so they're harder to hold in view
+const WANDER_DEG = 9 // how far they drift either side of where they landed (found zone is ±WIND_FOUND_ANGLE_DEG)
+const WANDER_BOB = 0.02 // up/down bob, as a share of the screen height
+const WANDER_SWAY_DEG = 5 // rocking back and forth
+const WANDER_FADE_SECONDS = 0.8 // the wander eases in after landing and out when the next gust comes
+const VIEW_SMOOTHING = 0.15 // seconds; smooths the gyroscope so small hand shakes don't jiggle the crops
 // After the wind step the plant springs back to the center
 const SETTLE_STIFFNESS = 6
 const SETTLE_DAMPING = 3
@@ -82,7 +96,6 @@ const sunSettings = useAppConfig().touchGrass.sun
 const camera = useCamera(sunSettings)
 const { running: cameraRunning, readout: cameraReadout } = camera
 const motion = useMotion()
-const harvest = useHarvest()
 
 // ---------- State shown on screen (refs, passed to child components) ----------
 
@@ -97,12 +110,16 @@ const waterSkyProgress = ref(0) // how far the blue spots have spread, 0–1
 // Where the bar's marker sits, 0 (left) – 1 (right). Sun and water: how far along the step is.
 // Wind: where the plant is on screen (0.5 = center).
 const barPosition = ref(0)
+const windHold = ref(0) // wind: how long the crops have been held in view, 0–1 (shown on the bar)
 const plantTransform = ref('') // CSS transform for the plant: wind drift, lean and growth
 const gustRequest = shallowRef<GustRequest | null>(null) // set to send a gust animation to AppWind
 const flash = reactive({ pulse: 0, on: false }) // the green "step done" frame, see AppFlash
+const tomatoRotation = reactive({ x: 0, y: 0 }) // radians, see AppTomato
+const harvested = ref(false) // "harvest" was tapped; the tomato fades before the start CAPTCHA returns
 
 // The sun sky shows while it is loading too, so it can measure its size
 // It shows again at the end, running backwards for the blend from white to night
+const tomatoVisible = computed(() => phase.value === 'final' && !harvested.value)
 const sunSkyVisible = computed(() => sunSkyStatus.value !== 'failed' && ['intro', 'sun', 'done', 'final'].includes(phase.value))
 // The blue only shows during the water step; it has drained away by the time the wind starts
 const waterSkyVisible = computed(() => waterSkyStatus.value === 'ready' && phase.value === 'water')
@@ -136,13 +153,33 @@ let sizeSpeed = 0
 let sizeTarget = 1
 let growthStep = 0 // index into GROWTH_SCALES
 
-// Plant position in the wind step, in px from the screen center (negative = left)
+// Plant position on screen, in px from the center (negative = left). Follows the crops' direction
+// in the wind step, then springs back to 0 after it.
 let plantX = 0
-let plantSpeedX = 0 // px per second
-let gust: { elapsed: number, duration: number, strength: number } | null = null
-let nextGustIn = FIRST_GUST_DELAY // seconds until the next gust starts
-let gustDirection = -1 // -1 blows toward the left, 1 toward the right
+let plantSpeedX = 0 // px per second; leans the plant
+// While the crops fly: lifted up (px, negative = up), tumbling (deg) and shrunk (1 = full size)
+let flightY = 0
+let flightSpin = 0
+let flightScale = 1
+// Wind step directions, in degrees clockwise around the player. Only differences matter.
+let aimHeading = 0 // where the phone points
+let viewHeading = 0 // where the screen looks: follows aimHeading, smoothed
+let lastSensorHeading: number | null = null // the gyroscope's heading on the previous frame
+let cropsHeading = 0 // where the crops are
+let nextGustIn = FIRST_GUST_DELAY // seconds until the next gust (counts down while the crops sit still)
+let blow: { elapsed: number, from: number, by: number, direction: number } | null = null // the crops flying off
+let wanderTime = 0 // seconds, drives the wander waves
+let wanderAmount = 0 // 0 while flying → 1 once settled
+let wanderDeg = 0 // the wander's current sideways drift, added to cropsHeading
+let wanderY = 0 // px
+let wanderSway = 0 // deg
+let blownAway = false // the first gust has blown; from then on, finding and holding them counts
 let gustCount = 0
+
+// Tomato: the phone's tilt when it appeared (degrees), and turning from keys / touch (degrees)
+let tomatoBase: { beta: number, gamma: number } | null = null
+let tomatoManualY = 0
+let firstStart = true // ?phase= only applies to the first round
 
 let lastFrameAt = 0
 let rafId = 0
@@ -168,9 +205,9 @@ function completeStep(): void {
 
 // ---------- Moving between steps ----------
 
-// Bar marker position for the wind step: left edge 0, center 0.5, right edge 1
+// Bar marker position for the wind step, a compass: straight ahead 0.5, behind the player 0 or 1
 function windBarPosition(): number {
-  return 0.5 + plantX / innerWidth
+  return 0.5 + wrapDegrees(cropsHeading + wanderDeg - viewHeading) / 360
 }
 
 function enter(next: Phase): void {
@@ -178,10 +215,18 @@ function enter(next: Phase): void {
   phaseTimer = 0
   stepDone = false
   if (next === 'water') barPosition.value = waterProgress
-  else if (next === 'wind') barPosition.value = windBarPosition()
+  else if (next === 'wind') {
+    lastSensorHeading = motion.state.heading // turning is counted from here
+    cropsHeading = viewHeading // the crops start straight ahead
+    barPosition.value = windBarPosition()
+  }
   else barPosition.value = sunProgress
   if (next === 'wind' || next === 'done') camera.stop() // no more camera needed
-  if (next === 'done') harvest.prepare() // ready before the final tap, so the download starts at once
+  if (next === 'final') {
+    tomatoBase = null // measured on the next frame
+    tomatoManualY = 0
+    harvested.value = false
+  }
 }
 
 // ?debug, N key: finishes the current step as if the player had done it
@@ -299,53 +344,79 @@ function updateSize(dt: number): void {
 
 // ---------- Wind step ----------
 
-function startGust(): void {
-  // The first gust always comes from the right (as in the wireframe), then it's random
-  const isFirst = gustCount === 0
-  gustDirection = isFirst || Math.random() < 0.5 ? -1 : 1
-  gustCount++
-  gust = { elapsed: 0, duration: randomIn(GUST_DURATION), strength: randomIn(GUST_STRENGTH) }
-  gustRequest.value = { id: gustCount, direction: gustDirection, duration: gust.duration }
+// Follows the player turning: the gyroscope on phones, arrow keys / touch otherwise
+function updateView(dt: number): void {
+  const sensor = motion.state.heading
+  if (sensor !== null && lastSensorHeading !== null) aimHeading += wrapDegrees(sensor - lastSensorHeading)
+  lastSensorHeading = sensor
+  aimHeading += motion.turn() * TURN_SPEED_DEG * dt
+  viewHeading = approach(viewHeading, aimHeading, VIEW_SMOOTHING, dt)
 }
 
-// Push from the current gust: rises and falls like a sine wave over its duration. 0 between gusts.
-function gustPush(dt: number): number {
-  if (!gust) {
-    nextGustIn -= dt
-    if (nextGustIn <= 0 && windProgress < 1) startGust()
-    return 0
+// One gust: the wind symbols cross the screen and the crops fly off with them
+function blowAway(): void {
+  const direction = Math.random() < 0.5 ? -1 : 1 // -1 blows toward the left, 1 toward the right
+  gustCount++
+  gustRequest.value = { id: gustCount, direction, duration: GUST_DURATION }
+  blow = { elapsed: 0, from: cropsHeading, by: direction * randomIn(BLOW_ANGLE), direction }
+  blownAway = true
+}
+
+// After landing, the crops drift, bob and rock a little. A few sine waves at unrelated speeds,
+// so the motion doesn't visibly repeat. `target` 1 wanders fully, 0 eases it out.
+function wander(dt: number, target: number): void {
+  wanderTime += dt
+  wanderAmount = approach(wanderAmount, target, WANDER_FADE_SECONDS, dt)
+  const t = wanderTime
+  const drift = 0.6 * Math.sin(t * 0.7) + 0.4 * Math.sin(t * 1.9 + 1.3)
+  wanderDeg = drift * WANDER_DEG * wanderAmount
+  wanderY = Math.sin(t * 1.4 + 0.5) * WANDER_BOB * innerHeight * wanderAmount
+  wanderSway = reduceMotion ? 0 : Math.sin(t * 2.3) * WANDER_SWAY_DEG * wanderAmount
+}
+
+// Moves the crops along their flight: round the player, up in an arc, tumbling and shrinking
+function fly(dt: number, pxPerDegree: number): void {
+  if (!blow) return
+  blow.elapsed += dt
+  const t = Math.min(1, blow.elapsed / BLOW_SECONDS)
+  const before = cropsHeading
+  cropsHeading = blow.from + blow.by * ease(t)
+  if (dt > 0) plantSpeedX = ((cropsHeading - before) / dt) * pxPerDegree // leans the crops as they fly
+  const arc = Math.sin(Math.PI * t) // 0 at take-off and landing, 1 mid-flight
+  flightY = -arc * BLOW_LIFT * innerHeight
+  flightScale = 1 - arc * BLOW_SHRINK
+  flightSpin = reduceMotion ? 0 : ease(t) * BLOW_SPIN_TURNS * 360 * blow.direction
+  if (t >= 1) {
+    blow = null
+    flightSpin = 0
+    nextGustIn = GUST_EVERY_SECONDS
   }
-  gust.elapsed += dt
-  const push = Math.sin(Math.PI * Math.min(1, gust.elapsed / gust.duration)) * gust.strength * gustDirection
-  if (gust.elapsed >= gust.duration) {
-    gust = null
-    nextGustIn = randomIn(GUST_PAUSE)
-  }
-  return push
 }
 
 function updateWind(dt: number): void {
-  const screenWidth = innerWidth
-  const push = gustPush(dt)
+  updateView(dt)
+  const pxPerDegree = innerWidth / VIEW_ANGLE_DEG
 
-  // Gusts push the plant, tilting pushes back, drag slows it down
-  const force = (push * GUST_FORCE + motion.tilt() * TILT_FORCE) * screenWidth - WIND_DRAG * plantSpeedX
-  plantSpeedX += force * dt
-  plantX += plantSpeedX * dt
-
-  // Bounce softly off the screen edges
-  const edge = screenWidth / 2
-  if (Math.abs(plantX) > edge) {
-    plantX = Math.sign(plantX) * edge
-    plantSpeedX *= -EDGE_BOUNCE
+  if (!blow) {
+    nextGustIn -= dt
+    if (nextGustIn <= 0) blowAway()
   }
+  plantSpeedX = 0
+  fly(dt, pxPerDegree)
+  wander(dt, blow ? 0 : 1)
+
+  // The crops sit at their direction in the room: turning toward them brings them on screen
+  const offset = wrapDegrees(cropsHeading + wanderDeg - viewHeading)
+  plantX = offset * pxPerDegree
   barPosition.value = windBarPosition()
 
-  // Progress only counts while a gust is blowing and the plant stays in the safe zone
-  const inSafeZone = Math.abs(plantX) < screenWidth * WIND_SAFE_ZONE
-  if (gust && inSafeZone) windProgress = Math.min(1, windProgress + dt / WIND_HOLD_SECONDS)
-  // Finish once the last gust has blown out
-  if (windProgress >= 1 && !gust) {
+  // Once they've landed: holding them in view fills the hold, losing them drains it
+  if (blownAway && !blow) {
+    const found = Math.abs(offset) < WIND_FOUND_ANGLE_DEG
+    windProgress = clamp(windProgress + (found ? dt / WIND_HOLD_SECONDS : -dt / WIND_LOSE_SECONDS), 0, 1)
+  }
+  windHold.value = windProgress
+  if (windProgress >= 1) {
     completeStep()
     enter('done')
   }
@@ -354,6 +425,7 @@ function updateWind(dt: number): void {
 // After the wind: night falls (the sun step backwards; the drawing fades with the light), then the closing CAPTCHA
 function updateNightfall(dt: number): void {
   settle(dt)
+  wander(dt, 0)
   phaseTimer += dt
   const blend = clamp((phaseTimer - NIGHTFALL_DELAY) / NIGHTFALL_SECONDS, 0, 1)
   setDaylight(1 - blend)
@@ -366,10 +438,12 @@ function settle(dt: number): void {
   plantX += plantSpeedX * dt
 }
 
-// Writes the plant's position, lean and size into its CSS transform
+// Writes the plant's position, lean, tumble and size into its CSS transform
 function renderPlant(): void {
   const lean = reduceMotion ? 0 : clamp((plantSpeedX / innerWidth) * LEAN_DEG_PER_SPEED, -LEAN_MAX_DEG, LEAN_MAX_DEG)
-  plantTransform.value = `translateX(${plantX.toFixed(1)}px) rotate(${lean.toFixed(2)}deg) scale(${size.toFixed(4)})`
+  const rotation = lean + flightSpin + wanderSway
+  const y = flightY + wanderY
+  plantTransform.value = `translate(${plantX.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${rotation.toFixed(2)}deg) scale(${(size * flightScale).toFixed(4)})`
 }
 
 // ---------- Frame loop ----------
@@ -382,23 +456,45 @@ function frame(now: number): void {
   else if (phase.value === 'water') updateWater(dt)
   else if (phase.value === 'wind') updateWind(dt)
   else if (phase.value === 'done') updateNightfall(dt)
+  else if (phase.value === 'final') updateFinal(dt)
   updateSize(dt)
   renderPlant()
   rafId = requestAnimationFrame(frame)
 }
 
-// ---------- Final CAPTCHA: harvest download ----------
+// ---------- Final: the tomato ----------
 
-// The closing CAPTCHA was sent. This runs straight from the tap/Enter, so the browser allows the
-// download. Then the game starts over at the sun step.
-function onFinalSolved(): void {
-  harvest.download()
-  blink()
-  restart()
+// Turns the tomato with the phone: tipping left/right spins it, forward/back tips it.
+// Keys and touch spin it too, for computers. After "harvest", waits for the fade, then the intro.
+function updateFinal(dt: number): void {
+  if (harvested.value) {
+    phaseTimer += dt
+    if (phaseTimer >= HARVEST_TO_INTRO_SECONDS) backToIntro()
+    return
+  }
+  const { beta, gamma } = motion.state
+  if (!tomatoBase && beta !== null && gamma !== null) tomatoBase = { beta, gamma }
+  let degX = 0
+  let degY = 0
+  if (tomatoBase && beta !== null && gamma !== null) {
+    degX = (beta - tomatoBase.beta) * TOMATO_TILT_GAIN
+    degY = (gamma - tomatoBase.gamma) * TOMATO_TILT_GAIN
+  }
+  tomatoManualY += motion.turn() * TOMATO_TURN_SPEED_DEG * dt
+  const rad = Math.PI / 180
+  tomatoRotation.x = approach(tomatoRotation.x, degX * rad, TOMATO_SMOOTHING, dt)
+  tomatoRotation.y = approach(tomatoRotation.y, (degY + tomatoManualY) * rad, TOMATO_SMOOTHING, dt)
 }
 
-// Back to the start of the sun step, as if the intro had just been solved
-function restart(): void {
+// "harvest" was tapped; AppTomato has already started the download
+function onHarvested(): void {
+  blink()
+  harvested.value = true
+  phaseTimer = 0
+}
+
+// Resets the game and shows the start CAPTCHA again. Solving it starts the sun step (start()).
+function backToIntro(): void {
   sunProgress = 0
   waterProgress = 0
   windProgress = 0
@@ -411,11 +507,29 @@ function restart(): void {
   sizeSpeed = 0
   plantX = 0
   plantSpeedX = 0
-  gust = null
+  flightY = 0
+  flightSpin = 0
+  flightScale = 1
+  aimHeading = 0
+  viewHeading = 0
+  lastSensorHeading = null
+  cropsHeading = 0
   nextGustIn = FIRST_GUST_DELAY
-  gustCount = 0
-  void camera.start() // the camera was turned off for the wind step; permission is already given
-  enter('sun')
+  blow = null
+  blownAway = false
+  wanderTime = 0
+  wanderAmount = 0
+  wanderDeg = 0
+  wanderY = 0
+  wanderSway = 0
+  windHold.value = 0
+  tomatoRotation.x = 0
+  tomatoRotation.y = 0
+  harvested.value = false
+  phase.value = 'intro'
+  phaseTimer = 0
+  stepDone = false
+  introVisible.value = true
 }
 
 function onVisibilityChange(): void {
@@ -428,13 +542,13 @@ function onVisibilityChange(): void {
 async function start(): Promise<void> {
   await Promise.all([motion.start(), camera.start()])
   introVisible.value = false
-  const jump = urlParam('phase')
+  const jump = firstStart ? urlParam('phase') : null
+  firstStart = false
   if (jump) jumpTo(jump)
   else enter('sun')
 }
 
-function onDrawingReady(drawing: SVGSVGElement): void {
-  harvest.setDrawing(drawing)
+function onDrawingReady(): void {
   drawingReady.value = true
   rafId = requestAnimationFrame(frame)
 }
@@ -471,7 +585,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Layers, back to front: skies, grid, plant + wind, bar, camera preview, start and closing CAPTCHAs, flash, debug -->
+  <!-- Layers, back to front: skies, grid, plant + wind, bar, camera preview, start CAPTCHA, tomato, flash, debug -->
   <div class="app-touch-grass">
     <!-- Sun step sky: Figma frame "1_1" fractal noise fill (Rectangle 6), revealed from night:
          bright spots appear at the noise peaks and spread as the sun comes in.
@@ -498,7 +612,7 @@ onBeforeUnmount(() => {
     <!-- Captcha grid (all three steps); the sun and water skies fill in cell by cell underneath it -->
     <AppCaptchaGrid :visible="gridVisible" />
 
-    <!-- Game area. Touch here stands in for the camera (no camera) and for tilt (wind step). -->
+    <!-- Game area. Touch here stands in for the camera (no camera) and for turning (wind step, no gyroscope). -->
     <main
       class="app-touch-grass__stage"
       @pointerdown="motion.onPointerDown"
@@ -515,7 +629,7 @@ onBeforeUnmount(() => {
     </main>
 
     <footer class="app-touch-grass__hud">
-      <AppLightbar v-if="barVariant" :variant="barVariant" :progress="barPosition" />
+      <AppLightbar v-if="barVariant" :variant="barVariant" :progress="barPosition" :hold="windHold" />
     </footer>
 
     <!-- Camera preview; hands its <video> to useCamera -->
@@ -535,12 +649,12 @@ onBeforeUnmount(() => {
       @first-tap="motion.start"
     />
 
-    <!-- Closing screen, on night: type the words and press → to download the harvest -->
-    <AppTypedCaptcha
-      :visible="phase === 'final'"
-      :title="FINAL_TITLE"
-      with-submit
-      @solved="onFinalSolved"
+    <!-- Closing screen, on night: the 3D tomato and the "harvest" button -->
+    <AppTomato
+      :visible="tomatoVisible"
+      :rotation-x="tomatoRotation.x"
+      :rotation-y="tomatoRotation.y"
+      @harvested="onHarvested"
     />
 
     <AppFlash :pulse="flash.pulse" :on="flash.on" :forever="false" @end="onFlashEnd" />

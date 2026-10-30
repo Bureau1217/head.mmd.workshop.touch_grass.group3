@@ -6,8 +6,8 @@
 //   water  show the camera something blue until the plant has grown
 //   wind   tilt the phone to keep the plant in the middle while gusts push it
 //   done   the three steps are finished; the screen blends from white back to night
-//   final  the closing CAPTCHA (type the words, press →); solving it downloads the drawing
-//          ("the harvest") and starts over at sun
+//   final  a 3D tomato that turns with the phone; "harvest" downloads the model, then the game
+//          goes back to the intro
 export type Phase = 'intro' | 'sun' | 'water' | 'wind' | 'done' | 'final'
 
 // The steps that show the progress bar at the bottom
@@ -72,4 +72,20 @@ export interface SunSettings {
   contrastFull: number // 0–1: contrast at which it counts fully
   onAt: number // 0–1: score at which light switches on
   offAt: number // 0–1: score below which it switches off again
+}
+
+// What createTomato() (app/lib/tomato.ts) hands back to AppTomato
+// A file ready to download
+export interface HarvestFile {
+  data: ArrayBuffer
+  filename: string
+  type: string // MIME type
+}
+
+export interface TomatoApi {
+  // The model file the "harvest" button downloads
+  harvest: HarvestFile
+  // Turns the model: x tips it toward/away from the player, y spins it left/right (radians)
+  setRotation: (x: number, y: number) => void
+  destroy: () => void
 }

@@ -7,9 +7,16 @@ import type { Rgb255, RgbUnit } from '~/types/touch-grass'
 // Captcha grid: cells per side. Used by the grid lines (AppCaptchaGrid) and the sky fill (lib/sky.ts).
 export const CAPTCHA_GRID = 3
 
-// Wind step: how far the plant may drift from the center (as a share of the screen width) and still
-// count as "steady". AppLightbar paints this zone green on the bar.
-export const WIND_SAFE_ZONE = 0.08
+// Wind step: the crops are blown off somewhere around the player, who turns to find them.
+// How many degrees of the room the screen shows across its width: turning this far moves the
+// crops by one screen width.
+export const VIEW_ANGLE_DEG = 90
+// The crops count as "found" while they are within this many degrees of straight ahead
+// (22° with a 90° view = their center within about the middle half of the screen)
+export const WIND_FOUND_ANGLE_DEG = 22
+// The wind bar is a compass covering the full 360°; this is the found zone either side of its
+// center, as a share of the bar. AppLightbar paints it green.
+export const WIND_SAFE_ZONE = WIND_FOUND_ANGLE_DEG / 360
 
 // Colors also used from script (the sky shaders, the page background fade).
 // Keep these equal to the CSS variables named in the comments (app/assets/_a-params.scss).
@@ -76,4 +83,11 @@ export function urlParam(name: string): string | null {
 
 export function hasUrlParam(name: string): boolean {
   return new URLSearchParams(location.search).has(name)
+}
+
+// ---------- Angles ----------
+
+// Wraps an angle difference into -180 … 180 degrees (the shorter way round)
+export function wrapDegrees(degrees: number): number {
+  return ((((degrees + 180) % 360) + 360) % 360) - 180
 }

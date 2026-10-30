@@ -1,38 +1,50 @@
 // Player input that isn't the camera:
-//   - tilt for the wind step: the gyroscope on phones, or touch position / arrow keys for testing
+//   - heading for the wind step: which way the phone's back camera points, from the gyroscope
+//   - beta / gamma for the tomato: how far the phone is tipped forward/back and left/right
+//   - turn: arrow keys / finger position, which turn the view when there's no gyroscope (testing)
 //   - touching: a finger on the screen, which stands in for light/water when there's no camera
 //   - Space held: always counts as light/water, for testing on a computer
-// Read `state` and `tilt()` every frame; nothing here is reactive on purpose.
+// Read `state` and `turn()` every frame; nothing here is reactive on purpose.
 
-const TILT_RANGE_DEG = 25 // leaning the phone this far counts as full tilt
+// Below this, the phone is lying too flat to tell which way it faces (0 = flat, 1 = upright)
+const MIN_UPRIGHT = 0.35
+
+const RAD = Math.PI / 180
+
+// Direction the back of the phone points, in degrees clockwise around the room (0–360).
+// The phone's back axis rotated by alpha/beta/gamma, then flattened onto the floor (W3C
+// "compass heading" formula). It works however the phone is held, except lying flat.
+// On iPhones alpha starts at an arbitrary angle, which is fine: only changes in heading are used.
+function backHeading(alpha: number, beta: number, gamma: number): number | null {
+  const cA = Math.cos(alpha * RAD)
+  const sA = Math.sin(alpha * RAD)
+  const cB = Math.cos(beta * RAD)
+  const sB = Math.sin(beta * RAD)
+  const cG = Math.cos(gamma * RAD)
+  const sG = Math.sin(gamma * RAD)
+  const east = -cA * sG - sA * sB * cG
+  const north = -sA * sG + cA * sB * cG
+  if (Math.hypot(east, north) < MIN_UPRIGHT) return null
+  return (Math.atan2(east, north) / RAD + 360) % 360
+}
 
 export function useMotion() {
   const state = {
-    sensorTilt: 0, // -1 … 1, from the gyroscope
-    keyTilt: 0, // -1 … 1, from the arrow keys
-    pointerTilt: 0, // -1 … 1, where the finger/mouse is: left edge -1, right edge 1
+    heading: null as number | null, // degrees, from the gyroscope; null until the sensor reports one
+    beta: null as number | null, // degrees, tipped forward/back (90 = upright); null until the sensor reports
+    gamma: null as number | null, // degrees, tipped left/right (0 = level); null until the sensor reports
+    keyTurn: 0, // -1 … 1, from the arrow keys
+    pointerTurn: 0, // -1 … 1, where the finger/mouse is: left edge -1, right edge 1
     touching: false, // finger on the screen: stands in for light/water only when there's no camera
     spaceHeld: false, // Space key: always works, for testing on a computer
   }
 
-  // How the screen is rotated (0, 90, 180, 270 / -90)
-  function screenAngle(): number {
-    if (screen.orientation) return screen.orientation.angle
-    const legacy: unknown = Reflect.get(window, 'orientation') // older iPhones
-    return typeof legacy === 'number' ? legacy : 0
-  }
-
-  // The gyroscope reports angles relative to the phone held upright. Pick the angle that means
-  // "leaning left/right" for how the screen is currently rotated.
   function onOrientation(e: DeviceOrientationEvent): void {
-    if (e.gamma == null) return
-    const angle = screenAngle()
-    let lean: number
-    if (angle === 90) lean = e.beta ?? 0
-    else if (angle === -90 || angle === 270) lean = -(e.beta ?? 0)
-    else if (angle === 180) lean = -e.gamma
-    else lean = e.gamma
-    state.sensorTilt = clamp(lean / TILT_RANGE_DEG, -1, 1)
+    if (e.alpha == null || e.beta == null || e.gamma == null) return
+    state.beta = e.beta
+    state.gamma = e.gamma
+    const heading = backHeading(e.alpha, e.beta, e.gamma)
+    if (heading !== null) state.heading = heading
   }
 
   // Starts listening to the gyroscope. iPhones ask for permission, and only right after a tap.
@@ -50,7 +62,7 @@ export function useMotion() {
     window.addEventListener('deviceorientation', onOrientation)
   }
 
-  function pointerToTilt(e: PointerEvent): number {
+  function pointerToTurn(e: PointerEvent): number {
     const halfWidth = innerWidth / 2
     return clamp((e.clientX - halfWidth) / halfWidth, -1, 1)
   }
@@ -58,32 +70,32 @@ export function useMotion() {
   // Bind these two on the game area (pointerdown/pointermove). Release is caught on the window.
   function onPointerDown(e: PointerEvent): void {
     state.touching = true
-    state.pointerTilt = pointerToTilt(e)
+    state.pointerTurn = pointerToTurn(e)
   }
 
   function onPointerMove(e: PointerEvent): void {
-    if (state.touching) state.pointerTilt = pointerToTilt(e)
+    if (state.touching) state.pointerTurn = pointerToTurn(e)
   }
 
   function onRelease(): void {
     state.touching = false
-    state.pointerTilt = 0
+    state.pointerTurn = 0
   }
 
   function onKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'ArrowLeft') state.keyTilt = -1
-    if (e.key === 'ArrowRight') state.keyTilt = 1
+    if (e.key === 'ArrowLeft') state.keyTurn = -1
+    if (e.key === 'ArrowRight') state.keyTurn = 1
     if (e.key === ' ') state.spaceHeld = true
   }
 
   function onKeyUp(e: KeyboardEvent): void {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') state.keyTilt = 0
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') state.keyTurn = 0
     if (e.key === ' ') state.spaceHeld = false
   }
 
-  // Combined tilt from all inputs, -1 (left) … 1 (right)
-  function tilt(): number {
-    return clamp(state.sensorTilt + state.keyTilt + state.pointerTilt, -1, 1)
+  // Turning from keys and touch, -1 (turn left) … 1 (turn right). The gyroscope is read from state.heading.
+  function turn(): number {
+    return clamp(state.keyTurn + state.pointerTurn, -1, 1)
   }
 
   onMounted(() => {
@@ -101,5 +113,5 @@ export function useMotion() {
     window.removeEventListener('deviceorientation', onOrientation)
   })
 
-  return { state, start, tilt, onPointerDown, onPointerMove }
+  return { state, start, turn, onPointerDown, onPointerMove }
 }
