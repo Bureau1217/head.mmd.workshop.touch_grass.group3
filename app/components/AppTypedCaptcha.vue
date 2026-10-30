@@ -38,7 +38,6 @@ interface Letter {
 }
 
 const ITALIC_CHANCE = 0.45
-const HINT = 'type here' // faded text in the empty answer box
 // id of the SVG warp filter below; unique per instance, as there are two on the page
 const FILTER_ID = `app-typed-captcha-warp-${useId()}`
 
@@ -278,10 +277,9 @@ onBeforeUnmount(() => {
           @click.once="emit('firstTap')"
           @input="followCaret"
         >
-        <!-- Shows the box takes typing: a blinking cursor (until the real one appears on focus) and a hint -->
+        <!-- Shows the box takes typing: a blinking cursor, until the real one appears on focus -->
         <span v-if="!answer" class="app-typed-captcha__hint" aria-hidden="true">
           <span class="app-typed-captcha__caret" />
-          {{ HINT }}
         </span>
       </span>
       <button
@@ -413,15 +411,13 @@ onBeforeUnmount(() => {
   }
 }
 
-// Empty-box hint: blinking cursor + faded text, where the typed text will start
+// Empty-box hint: a blinking cursor where the typed text will start
 .app-typed-captcha__hint {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
-  gap: 0.3em;
   font-size: max(16px, 1.25rem); // same size as the field
-  color: var(--app-color-ink-faded);
   white-space: nowrap;
   pointer-events: none; // taps go through to the field
 }
