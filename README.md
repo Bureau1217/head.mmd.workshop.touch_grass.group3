@@ -1,20 +1,9 @@
 # Touch Grass
 
-
-
-https://github.com/user-attachments/assets/d52a5a50-3cb1-42dc-b846-4913b3f02c5b
-
-
-
-
-
-https://github.com/user-attachments/assets/1f1de1f4-deb5-43da-80e9-e59ebde7239a
-
-
-
 A small browser game played with the phone's camera and gyroscope, built with Nuxt 4, Vue 3 and WebGPU.
 
 **Play it:** [bureau1217.github.io/head.mmd.workshop.touch_grass.group3](https://bureau1217.github.io/head.mmd.workshop.touch_grass.group3/) (open it on a phone).
+
 Disguised as a CAPTCHA, it takes the player through three steps to grow a drawing of vegetables:
 
 1. **Intro**: type the warped words to prove you're "a good working human", then press →.
@@ -29,9 +18,9 @@ Without a camera, hold a finger on the screen (or Space on a computer) instead o
 
 ### Gameplay
 
-A full playthrough on an iPhone, recorded from the live site on GitHub Pages (58 s). Click the animation to download the full video with sound.
+A full playthrough on an iPhone, recorded from the live site on GitHub Pages (58 s).
 
-<a href="public/Documentation/gameplay.mp4"><img src="public/Documentation/gameplay.gif" alt="Screen recording of a full playthrough: typing CAPTCHA, sun, water, wind and the 3D tomato" width="260"></a>
+https://github.com/user-attachments/assets/d52a5a50-3cb1-42dc-b846-4913b3f02c5b
 
 ### Exhibition setup
 
@@ -43,9 +32,9 @@ The installation: a screen with the QR code that opens the game, a 3D printer fo
   <img src="public/Documentation/photo-6087.jpg" alt="A white 3D-printed tomato with a QR code on its face, between real carrots and a tomato on artificial grass" width="260">
 </p>
 
-The screen turns the 3D tomato until its back, the QR code, faces the visitors (6 s). Click the animation to download the full video.
+The screen turns the 3D tomato until its back, the QR code, faces the visitors (6 s).
 
-<a href="public/Documentation/exhibition.mp4"><img src="public/Documentation/exhibition.gif" alt="The screen on the exhibition table: the red tomato turns to reveal the QR code" width="260"></a>
+https://github.com/user-attachments/assets/1f1de1f4-deb5-43da-80e9-e59ebde7239a
 
 ## Running it
 
