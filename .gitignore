@@ -26,5 +26,3 @@ logs
 # Local HTTPS certificate for phone testing
 .certs
 
-# Full-size originals of the documentation media (web-sized copies are committed)
-public/Documentation/originals/

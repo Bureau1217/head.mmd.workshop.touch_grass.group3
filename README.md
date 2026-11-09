@@ -1,6 +1,8 @@
 # Touch Grass
 
 A small browser game played with the phone's camera and gyroscope, built with Nuxt 4, Vue 3 and WebGPU.
+
+**Play it:** [bureau1217.github.io/head.mmd.workshop.touch_grass.group3](https://bureau1217.github.io/head.mmd.workshop.touch_grass.group3/) (open it on a phone).
 Disguised as a CAPTCHA, it takes the player through three steps to grow a drawing of vegetables:
 
 1. **Intro**: type the warped words to prove you're "a good working human", then press →.
@@ -15,18 +17,23 @@ Without a camera, hold a finger on the screen (or Space on a computer) instead o
 
 ### Gameplay
 
-A full playthrough on an iPhone, recorded from the live site on GitHub Pages (58 s). Click the picture to watch it.
+A full playthrough on an iPhone, recorded from the live site on GitHub Pages (58 s). Click the animation to download the full video with sound.
 
-<a href="public/Documentation/gameplay.mp4"><img src="public/Documentation/gameplay-poster.jpg" alt="Screen recording: the vegetable drawing in color on white, during the game" width="260"></a>
+<a href="public/Documentation/gameplay.mp4"><img src="public/Documentation/gameplay.gif" alt="Screen recording of a full playthrough: typing CAPTCHA, sun, water, wind and the 3D tomato" width="260"></a>
 
 ### Exhibition setup
 
 The installation: a screen with the QR code that opens the game, a 3D printer for the harvested tomato, real and printed vegetables on artificial grass, and a sign asking visitors to use mobile data, because the school Wi-Fi (eduroam) blocks the scan.
 
 <p>
-  <img src="public/Documentation/photo-6084.jpg" alt="Exhibition table: 3D printer, screen with a QR code in a red tomato shape, vegetables on artificial grass" width="400">
-  <img src="public/Documentation/photo-6085.jpg" alt="The same table from a slightly different angle" width="400">
+  <img src="public/Documentation/photo-6084.jpg" alt="Exhibition table: 3D printer, screen with a QR code in a red tomato shape, vegetables on artificial grass" width="260">
+  <img src="public/Documentation/photo-6094.jpg" alt="The table from the front: 3D printer with carrots and tomatoes on top, screen showing the red 3D tomato, the mobile-data sign" width="260">
+  <img src="public/Documentation/photo-6087.jpg" alt="A white 3D-printed tomato with a QR code on its face, between real carrots and a tomato on artificial grass" width="260">
 </p>
+
+The screen turns the 3D tomato until its back, the QR code, faces the visitors (6 s). Click the animation to download the full video.
+
+<a href="public/Documentation/exhibition.mp4"><img src="public/Documentation/exhibition.gif" alt="The screen on the exhibition table: the red tomato turns to reveal the QR code" width="260"></a>
 
 ## Running it
 
