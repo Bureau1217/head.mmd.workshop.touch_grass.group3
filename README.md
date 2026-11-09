@@ -1,5 +1,17 @@
 # Touch Grass
 
+
+
+https://github.com/user-attachments/assets/d52a5a50-3cb1-42dc-b846-4913b3f02c5b
+
+
+
+
+
+https://github.com/user-attachments/assets/1f1de1f4-deb5-43da-80e9-e59ebde7239a
+
+
+
 A small browser game played with the phone's camera and gyroscope, built with Nuxt 4, Vue 3 and WebGPU.
 
 **Play it:** [bureau1217.github.io/head.mmd.workshop.touch_grass.group3](https://bureau1217.github.io/head.mmd.workshop.touch_grass.group3/) (open it on a phone).
